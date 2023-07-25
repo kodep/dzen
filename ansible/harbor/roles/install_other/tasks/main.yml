@@ -1,0 +1,39 @@
+---
+- name: Installing Nginx # Установка Nginx через пакетный менеджер apt
+  apt:
+    name: nginx
+    state: present
+    update_cache: yes
+
+- name: Enabling and starting Nginx service # Запуск сервиса Nginx и занесение его в автозагрузку
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Deleting default Nginx configuration # Удаление стандартного конфига Nginx
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /etc/nginx/sites-enabled/default
+    - /etc/nginx/sites-available/default
+  notify: Restart Nginx
+
+- name: Installing Snapd # Установка Snapd через пакетный менеджер apt
+  apt:
+    name: snapd
+    state: present
+    update_cache: yes
+
+- name: Installing Certbot # Установка Certbot через Snap
+  snap:
+    name: certbot
+    state: present
+    classic: yes
+
+- name: Creating symbolic link for Certbot # Создание символьной ссылки, чтобы Certbot можно было использовать из любой точки ОС
+  file:
+    src: "/snap/bin/certbot"
+    dest: "/usr/bin/certbot"
+    state: link

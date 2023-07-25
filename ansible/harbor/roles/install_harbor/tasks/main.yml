@@ -1,0 +1,70 @@
+---
+- name: Checking if Harbor is already installed # Проверка на то, что Harbor уже установлен
+  stat:
+    path: "{{ harbor_dir }}"
+  register: harbor_folder_st
+
+- name: "Creating Harbor directory... ({{ harbor_download_dir }})" # Создание директории для Harbor
+  file:
+    path: "{{ harbor_download_dir }}"
+    state: directory
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)
+
+- name: Downloading Harbor v{{ harbor_version }} installer # Скачивание установщика Harbor
+  unarchive:
+    src: "{{ harbor_download_url }}"
+    dest: "{{ harbor_download_dir }}"
+    remote_src: yes
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)
+
+- name: Creating Harbor config file from template # Создание конфига Harbor из шаблона
+  template:
+    src: harbor.yml.j2
+    dest: "{{ harbor_dir }}/harbor.yml"
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)
+
+- name: Creating Nginx config without SSL file from template for Harbor # Создание конфига Nginx без использования SSL из шаблона
+  template:
+    src: harbor_without_ssl.conf.j2
+    dest: "/etc/nginx/sites-available/{{ harbor_url }}.conf"
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)
+
+- name: Creating symbolic link for Nginx config file # Создание символьной ссылки на конфиг Nginx
+  file:
+    src: "/etc/nginx/sites-available/{{ harbor_url }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ harbor_url }}.conf"
+    state: link
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)
+
+- name: Generating Let's Encrypt SSL Certificate # Генерация нового SSL сертификата от Let's Encrypt
+  command: certbot --non-interactive --agree-tos -m {{ lets_encrypt_email }} --nginx -d {{ harbor_url }}
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)
+
+- name: Updating Harbor config with SSL from template # Создание Nginx конфига с использованием SSL из шаблона
+  template:
+    src: harbor_with_ssl.conf.j2
+    dest: "/etc/nginx/sites-available/{{ harbor_url }}.conf"
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)
+
+- name: Starting Harbor installer # Запуск установщика Harbor
+  command: "{{ harbor_dir }}/install.sh"
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)
+
+- name: Collecting service information # Сбор и вывод служебных данных
+  debug:
+    msg:
+      - "Harbor URL - https://{{ harbor_url }}"
+      - "Harbor Directory - {{ harbor_dir }}"
+      - "Harbor Username - admin"
+      - "Harbor Admin Password - {{ harbor_admin_password }}"
+      - "Harbor Database Password - {{ harbor_database_password }}"
+  when:
+    - not harbor_folder_st.stat.exists or (harbor_folder_st.stat.isdir is defined and not harbor_folder_st.stat.isdir)

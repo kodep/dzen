@@ -1,0 +1,36 @@
+server {
+    server_name {{ harbor_url }};
+    listen 443 ssl;
+
+    client_max_body_size 0;
+
+    ssl_certificate {{ harbor_certificate }};
+    ssl_certificate_key {{ harbor_private_key }};
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass          https://127.0.0.1:{{ harbor_https_port }};
+        proxy_read_timeout  90s;
+        proxy_set_header          Host      $host;
+        proxy_set_header          X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_buffers             128      64k;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
+    }
+}
+
+server {
+    if ($host = {{ harbor_url }}) {
+        return 301 https://$host$request_uri;
+    }
+
+    server_name {{ harbor_url }};
+    listen 80;
+
+    location / {
+        rewrite ^(.*)$ https://$host$1redirect;
+    }
+}

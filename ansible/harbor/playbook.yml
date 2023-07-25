@@ -1,0 +1,48 @@
+---
+- hosts: all
+  become: true
+  user: "{{ ansible_user }}"
+
+  vars_prompt:
+    - name: "harbor_url"
+      prompt: "Укажите доменное имя для Harbor"
+      private: no
+    - name: "lets_encrypt_email"
+      prompt: "Укажите почтовый ящик, который будет использован для генерации SSL-сертификата"
+      private: no
+    - name: "harbor_admin_password"
+      prompt: "Укажите пароль администратора для Harbor (Оставьте поле пустым, чтобы сгенерировать случайный пароль)"
+      private: no
+    - name: "harbor_database_password"
+      prompt: "Укажите пароль для базы данных Harbor (Оставьте поле пустым, чтобы сгенерировать случайный пароль)"
+      private: no
+
+  pre_tasks:
+    - name: Checking domain name
+      fail:
+        msg: "[-] Не указано доменное имя!"
+      when:
+        - harbor_url == ""
+
+    - name: Checking Email
+      fail:
+        msg: "[-] Не указан почтовый ящик!"
+      when:
+        - lets_encrypt_email == ""
+
+    - name: Generating random admin password
+      set_fact:
+        harbor_admin_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters') }}"
+      when:
+        - harbor_admin_password == ""
+
+    - name: Generating random database password
+      set_fact:
+        harbor_database_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters') }}"
+      when:
+        - harbor_database_password == ""
+
+  roles:
+    - install_docker
+    - install_other
+    - install_harbor

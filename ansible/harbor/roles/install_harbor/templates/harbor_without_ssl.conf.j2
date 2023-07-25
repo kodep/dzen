@@ -1,0 +1,18 @@
+server {
+    server_name {{ harbor_url }};
+    listen 80;
+    
+    client_max_body_size 0;
+
+    location / {
+        proxy_pass          https://127.0.0.1:{{ harbor_https_port }};
+        proxy_read_timeout  90s;
+        proxy_set_header          Host      $host;
+        proxy_set_header          X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_buffers             128      64k;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
+    }
+}

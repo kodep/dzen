@@ -1,0 +1,28 @@
+---
+# tasks file for k8s_dashboard
+
+- name: create dashboard # создаем дашборд в кластере
+  become_user: ubuntu
+  command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+
+- name: create token # генерируем пользователя с правами админа 
+  become_user: ubuntu
+  command: "{{ item }}"
+  with_items:
+    - kubectl create serviceaccount admin-user -n kubernetes-dashboard
+    - kubectl create clusterrolebinding dashboard-admin -n kubernetes-dashboard --clusterrole=cluster-admin --serviceaccount=kubernetes-dashboard:admin-user
+
+- name: create token # создаем токен для входа в дашборд и записываем его в переменную 
+  become_user: ubuntu
+  command: kubectl -n kubernetes-dashboard create token admin-user
+  register: dashboard_token
+
+- name: Copy token to local file # локально создаем файл и записываем туда значение переменной с токеном
+  become: true
+  local_action: copy content="{{ dashboard_token.stdout_lines[0] }}" dest="./dashboard_token"
+
+- name: start dashboard # запускаем дашборд в фоновом 
+  become_user: ubuntu
+  shell: nohup kubectl proxy &
+
+

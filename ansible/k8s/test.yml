@@ -1,0 +1,100 @@
+---
+- name: Install Docker on all servers
+  hosts: all
+  become: true
+  tasks:
+    - name: Install required packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - software-properties-common
+        - curl
+        - gnupg2
+        - docker.io
+
+- name: Add Rancher and Helm GPG key
+  hosts: master
+  become: true
+  tasks:
+    - name: Add Rancher GPG key
+      apt_key:
+        url: https://releases.rancher.com/server-charts/latest/kubernetes-release/release.asc
+        state: present
+    - name: Add Helm GPD key
+      apt_key:
+        url: https://baltocdn.com/helm/signing.asc
+        state: present
+
+- name: Install Helm
+  hosts: 
+
+- name: Add Rancher Helm repository
+  hosts: master
+  become: true
+  tasks:
+    - name: Add Rancher Helm repository
+      command: helm repo add rancher https://releases.rancher.com/server-charts/latest
+
+- name: Install Rancher with Helm
+  hosts: master
+  become: true
+  tasks:
+    - name: Create rancher-system namespace
+      command: kubectl create namespace cattle-system
+      ignore_errors: yes
+
+    - name: Install Rancher with Helm
+      command: helm install rancher rancher/rancher --namespace cattle-system --set hostname=<your_rancher_domain>
+      args:
+        creates: "/etc/rancher"
+
+- name: Set up Kubernetes Master
+  hosts: master
+  become: true
+  tasks:
+    - name: Install kubeadm, kubelet, kubectl
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - kubeadm
+        - kubelet
+        - kubectl
+
+    - name: Initialize Kubernetes Master
+      command: kubeadm init --pod-network-cidr=192.168.0.0/16
+      args:
+        creates: "/etc/kubernetes/admin.conf"
+      register: kubeadm_output
+      ignore_errors: yes
+
+    - name: Configure kubeconfig for regular users
+      command: mkdir -p $HOME/.kube && cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+      args:
+        creates: "$HOME/.kube/config"
+      become: false
+      become_user: "{{ ansible_user }}"
+
+    - name: Install Flannel Pod Network
+      command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+      when: kubeadm_output.rc == 0
+
+- name: Set up Kubernetes Workers
+  hosts: workers
+  become: true
+  tasks:
+    - name: Install kubeadm, kubelet, kubectl
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - kubeadm
+        - kubelet
+        - kubectl
+
+    - name: Join Workers to Kubernetes Master
+      command: "{{ hostvars['master'].kubeadm_output.stdout_lines[-1] }}"
+      when: kubeadm_output.rc == 0 and hostvars['master'].kubeadm_output is defined

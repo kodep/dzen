@@ -1,0 +1,7 @@
+---
+# defaults file for k8s
+docker_gpg_key: "https://download.docker.com/linux/ubuntu/gpg"
+docker_apt_repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+
+docker_compose_url: "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-{{ ansible_architecture }}"
+docker_compose_dest: "/usr/local/bin/docker-compose"

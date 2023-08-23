@@ -1,0 +1,7 @@
+---
+# tasks file for node_invite
+  - name: Copy the join command to server location # копируем файл с нашей комадной для присоединения ноды на сервер, меняем расширение и добавляем права на исполнение
+    copy: src=join-command dest=/tmp/join-command.sh mode=0777
+
+  - name: Join the node to cluster # запускаем наш файл
+    command: sh /tmp/join-command.sh

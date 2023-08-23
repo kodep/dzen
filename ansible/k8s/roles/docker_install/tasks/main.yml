@@ -1,0 +1,47 @@
+---
+- name: Installing Docker dependencies # Установка необходимых зависимостей для Docker
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+    state: present
+    update_cache: yes
+
+- name: Adding Docker GPG key # Добавление GPG ключа для официального apt-репозитория Docker
+  apt_key:
+    url: "{{ docker_gpg_key }}"
+    state: present
+
+- name: Adding Docker apt repository # Добавление официального apt-репозитория Docker
+  apt_repository:
+    repo: "{{ docker_apt_repo }}"
+    state: present
+
+- name: Installing Docker # Установка Docker через пакетный менеджер apt
+  apt:
+    name: [docker-ce, docker-ce-cli, containerd.io]
+    state: latest
+    update_cache: yes
+
+- name: Enabling and starting Docker service # Запуск сервиса Docker и занесение его в автозагрузку
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Allowing '{{ ansible_user }}' user to access Docker socket # Добавление пользователя в группу Docker
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Downloading Docker-Compose # Скачивание Docker-Compose, выдача прав на исполнение
+  get_url:
+    url: "{{ docker_compose_url }}"
+    dest: "{{ docker_compose_dest }}"
+    mode: '0755'
+
+- name: set net-bridge
+  command: sysctl net.bridge.bridge-nf-call-iptables=1

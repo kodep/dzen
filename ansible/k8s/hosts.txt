@@ -1,0 +1,5 @@
+[master]
+master ansible_host=master_ip ansible_user=ubuntu ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+[worker1]
+worker1 ansible_host=worker_ip ansible_user=ubuntu ansible_ssh_common_args='-o StrictHostKeyChecking=no'

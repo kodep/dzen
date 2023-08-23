@@ -1,0 +1,63 @@
+---
+# tasks file for k8s
+- name: install k8s dependencies # устанавливаем зависимости для kubernetes
+  apt:
+    name: 
+      - ca-certificates
+      - curl
+      - apt-transport-https
+      - keepalived 
+      - haproxy
+    state: present
+    update_cache: yes
+
+- name: create folder for keyrings # cоздаем папку keyrings, потому что в ubuntu раньше 22 версии нет данной папки
+  command: sudo mkdir -m 755 /etc/apt/keyrings
+
+- name: add gpg key # добавляем ключ
+  apt_key:
+    url: "{{ k8s_gpg_key }}"
+    state: present
+    keyring: /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+
+- name: add repository # добавляем репозиторий
+  apt_repository: 
+    repo: "{{ k8s_apt_repo }}"
+    state: present
+
+- name: install k8s # устанавливаем kubernetes
+  apt:
+    name:
+      - kubectl
+      - kubeadm
+      - kubelet
+    
+- name: restart kubelet # презапускаем kubelet
+  service:
+    name: kubelet
+    state: restarted
+
+- name: Enable CRI plugin in containerd # замена строки на включение плагина CRI 
+  lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^disabled_plugins'
+    line: enable_plugins=["cri"]
+    state: present
+
+- name: restart containedr # презапускаем containedr
+  service:
+    name: containerd
+    state: restarted
+
+- name: Remove swapfile from /etc/fstab # В эти двух командах выключаем swap
+  mount:
+    name: "{{ item }}"
+    fstype: swap
+    state: absent
+  with_items:
+    - swap
+    - none
+
+- name: Disable swap
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0

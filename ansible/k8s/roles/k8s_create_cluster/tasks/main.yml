@@ -1,0 +1,29 @@
+---
+# tasks file for k8s_create_cluster
+
+- name: Initialize the Kubernetes cluster using kubeadm # инициализируем кластер
+  become_user: root
+  command: kubeadm init
+
+- name: get permission # даем доступ для обычного пользователя
+  shell: "{{ item }}"
+  become_user: ubuntu
+  with_items:
+   - mkdir -p $HOME/.kube
+   - sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+   - sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+- name: Install calico pod network # устанавливаем calico pod network
+  become: false
+  shell: "{{ item }}"
+  with_items:
+   - curl https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml -O
+   - kubectl apply -f calico.yaml
+
+- name: Generate join command # показываем команду с добавлением ноды и записываем ее в переменную
+  become_user: ubuntu
+  command: kubeadm token create --print-join-command
+  register: join_command
+
+- name: Copy join command to local file # создаем локальный файл и добавляем туда переменную для присоединения ноды
+  local_action: copy content="{{ join_command.stdout_lines[0] }}" dest="./join-command"

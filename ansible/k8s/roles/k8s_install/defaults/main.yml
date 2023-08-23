@@ -1,0 +1,5 @@
+---
+# defaults file for k8s
+# k8s_gpg_key: "https://dl.k8s.io/apt/doc/apt-key.gpg"
+k8s_gpg_key: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
+k8s_apt_repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"

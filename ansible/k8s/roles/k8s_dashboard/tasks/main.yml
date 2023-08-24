@@ -5,7 +5,7 @@
   become_user: ubuntu
   command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
 
-- name: create token # генерируем пользователя с правами админа 
+- name: create user # генерируем пользователя с правами админа 
   become_user: ubuntu
   command: "{{ item }}"
   with_items:
